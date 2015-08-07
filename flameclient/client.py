@@ -23,15 +23,89 @@
 # SOFTWARE.
 
 from flameclient.flame import TemplateGenerator  # noqa
+from flameclient.managers import KeystoneManager
+
+from keystoneclient.openstack.common.apiclient.exceptions import Conflict
 
 
 class Client(object):
-    def __init__(self, username, password, tenant_name, auth_url, **kwargs):
-        self.template_generator = TemplateGenerator(username, password,
-                                                    tenant_name, auth_url,
-                                                    **kwargs)
+    """Flame client.
 
-    def generate(self, include_networks, include_instances, include_volumes):
-        return self.template_generator.generate(include_networks,
-                                                include_instances,
-                                                include_volumes)
+    This client is a context.
+    Example:
+        with Client(...) as flame:
+            flame.foo(bar)
+
+    :param string username: A user name with access to the project.
+    :param string password: The user's password.
+    :param string tenant_name: Name of project to use for authentication.
+    :param string auth_url: Authentication URL.
+
+    Optional parameters:
+    :param boolean insecure :Explicitly allow clients to perform
+        \"insecure\" SSL (https) requests. The server's certificate will
+        not be verified against any certificate authorities. This option
+        should be used with caution.
+    :param string endpoint_type: Type of endpoint to use.
+    :param string region_name: Region Name to use.
+    :param string target_projet: Name of project to extract template from.
+        If the user is not admin in that project, it will grant itself
+        admin role for the operation. Defaults to tenant_name. User must
+        be admin.
+    """
+    def __init__(self, username, password, tenant_name, auth_url, **kwargs):
+        self.username = username
+        self.password = password
+        self.tenant_name = tenant_name
+        self.auth_url = auth_url
+        self.target_project = kwargs.get('target_project')
+        self.endpoint_type = kwargs.get('endpoint_type', 'publicURL')
+        self.region_name = kwargs.get('region_name', None)
+        self.insecure = kwargs.get('insecure', False)
+        self.set_as_admin = False
+
+        if self.target_project:
+            self.key_mgr = KeystoneManager(self.username, self.password,
+                                           self.tenant_name, self.auth_url,
+                                           self.insecure)
+            self.target_project_id = self.key_mgr.get_target_project_id(
+                self.target_project)
+            try:
+                self.key_mgr.become_project_admin(self.target_project_id)
+                self.set_as_admin = True
+            # Execption raised if user is already admin.
+            except Conflict:
+                self.set_as_admin = False
+        else:
+            self.target_project = self.tenant_name
+        self.template_generator = TemplateGenerator(
+            self.username, self.password,
+            self.target_project, self.auth_url,
+            region_name=self.region_name,
+            insecure=self.insecure,
+            endpoint_type=self.endpoint_type)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        if self.set_as_admin:
+            self.key_mgr.undo_become_project_admin(self.target_project_id)
+
+    def extract_vm_details(self, exclude_servers=False, exclude_volumes=False,
+                           generate_stack_data=False, exclude_keypairs=False,
+                           **kwargs):
+        return self.template_generator.extract_vm_details(exclude_servers,
+                                                          exclude_volumes,
+                                                          exclude_keypairs,
+                                                          generate_stack_data,
+                                                          **kwargs)
+
+    def extract_data(self):
+        return self.template_generator.extract_data()
+
+    def heat_template(self):
+        return self.template_generator.heat_template()
+
+    def stack_data_template(self):
+        return self.template_generator.stack_data_template()

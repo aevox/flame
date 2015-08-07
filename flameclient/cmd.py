@@ -76,21 +76,30 @@ def main(args=None):
                         default=False,
                         help="In addition to template, generate Heat "
                              "stack data file.")
+    parser.add_argument('--target-project', type=str,
+                        default=None,
+                        help="Name of project to extract template from. "
+                             "If the user is not admin in that project, it "
+                             "will grant itself admin role for the operation. "
+                             "Defaults to tenant_name. "
+                             "User must be admin.")
 
     args = parser.parse_args()
-    flame = client.Client(args.username, args.password,
-                          args.project, args.auth_url,
-                          insecure=args.insecure,
-                          endpoint_type=args.endpoint_type,
-                          region_name=args.region)
-    template = flame.template_generator
-    template.extract_vm_details(args.exclude_servers,
-                                args.exclude_volumes,
-                                args.exclude_keypairs,
-                                args.generate_stack_data)
-    template.extract_data()
-    print("### Heat Template ###")
-    print(template.heat_template())
-    if args.generate_stack_data:
-        print("### Stack Data ###")
-        print(template.stack_data_template())
+
+    flame_args = (args.username, args.password, args.project, args.auth_url)
+    flame_kwargs = {'insecure': args.insecure,
+                    'endpoint_type': args.endpoint_type,
+                    'region_name': args.region,
+                    'target_project': args.target_project}
+
+    with client.Client(*flame_args, **flame_kwargs) as flame:
+        flame.extract_vm_details(args.exclude_servers,
+                                 args.exclude_volumes,
+                                 args.exclude_keypairs,
+                                 args.generate_stack_data)
+        flame.extract_data()
+        print("### Heat Template ###")
+        print(flame.heat_template())
+        if args.generate_stack_data:
+            print("### Stack Data ###")
+            print(flame.stack_data_template())

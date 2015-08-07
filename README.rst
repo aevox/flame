@@ -47,15 +47,18 @@ Usage
       --region REGION       Name of region. Defaults to env[OS_REGION_NAME]
       --auth_url AUTH_URL   Authentication URL. Defaults to env[OS_AUTH_URL].
       --insecure            Explicitly allow clients to perform"insecure" SSL
-                            (https) requests. The server's certificate will not be
-                            verified against any certificate authorities. This
-                            option should be used with caution.
+                            (https) requests. The server's certificate will not
+                            be verified against any certificate authorities.
+                            This option should be used with caution.
       --exclude-servers     Do not export in template server resources
       --exclude-volumes     Do not export in template volume resources
       --exclude-keypairs    Do not export in template key pair resources
-      --generate-stack-data
-                            In addition to template, generate Heat stack data
+      --generate-stack-data In addition to template, generate Heat stack data
                             file.
+      --target_project      Name of project to extract template from. If the
+                            user is not admin in that project, it will grant
+                            itself admin role for the operation. Defaults to
+                            tenant_name. User must be admin.
 
 Usage example
 -------------

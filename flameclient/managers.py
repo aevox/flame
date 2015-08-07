@@ -42,6 +42,7 @@ class KeystoneManager(object):
         self.insecure = insecure
         self.region_name = region_name
         self.endpoint_type = endpoint_type
+        self.admin_role_id = None
 
     def client(self):
         if not self._client:
@@ -67,6 +68,33 @@ class KeystoneManager(object):
 
     def get_project_id(self):
         return self.client().project_id
+
+    def get_target_project_id(self, target_project):
+        tenants = self.client().tenants.list()
+        self.target_project_id = filter(lambda x: x.name == target_project,
+                                        tenants)[0].id
+        return self.target_project_id
+
+    def get_admin_role_id(self):
+        if not self.admin_role_id:
+            roles = self.client().roles.list()
+            self.admin_role_id = filter(lambda x: x.name == "admin",
+                                        roles)[0].id
+        return self.admin_role_id
+
+    def become_project_admin(self, project_id):
+        user_id = self.client().user_id
+        admin_role_id = self.get_admin_role_id()
+        return self.client().roles.add_user_role(user_id,
+                                                 admin_role_id,
+                                                 project_id)
+
+    def undo_become_project_admin(self, project_id):
+        user_id = self.client().user_id
+        admin_role_id = self.get_admin_role_id()
+        return self.client().roles.remove_user_role(user_id,
+                                                    admin_role_id,
+                                                    project_id)
 
 
 class NeutronManager(object):
