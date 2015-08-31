@@ -22,10 +22,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from flameclient.flame import TemplateGenerator  # noqa
-from flameclient.managers import KeystoneManager
+import flameclient.managers.KeystoneManaer as KeystoneManager
 
-from keystoneclient.openstack.common.apiclient.exceptions import Conflict
+from keystoneclient.openstack.common.apiclient import exceptions
+
+from flameclient.flame import TemplateGenerator  # noqa
 
 
 class Client(object):
@@ -74,7 +75,7 @@ class Client(object):
                 self.key_mgr.become_project_admin(self.target_project_id)
                 self.set_as_admin = True
             # Execption raised if user is already admin.
-            except Conflict:
+            except exceptions.Conflict:
                 self.set_as_admin = False
         else:
             self.target_project = self.tenant_name
