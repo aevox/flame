@@ -25,6 +25,7 @@
 import mock
 
 from flameclient import flame
+from flameclient import managers
 from flameclient.tests import base
 
 
@@ -2335,3 +2336,111 @@ class GenerationTests(BaseTestCase):
         self.assertEqual(generator.template['resources'], expected_resources)
         self.assertEqual(generator.template['parameters'], expected_parameters)
         self.assertEqual(generator.stack_data['resources'], expected_data)
+
+
+class FakeTenant(FakeBase):
+    enabled = True
+    description = None
+    name = 'bobytenant'
+    id = '0b8a39e82'
+
+
+class FakeTenants(FakeBase):
+
+    tenants = [FakeTenant(),
+               FakeTenant(id='12820387', name='fake1'),
+               FakeTenant(id='111222333', name='fake2')]
+
+    def list(self):
+        return self.tenants
+
+
+class FakeRole(FakeBase):
+    id = '0b0b8b604aed4'
+    name = 'anotherrole'
+
+
+class FakeRoles(FakeBase):
+
+    roles = [FakeRole(),
+             FakeRole(id='1213nnt344', name='admin'),
+             FakeRole(id='111222333', name='rolerole')]
+
+    def list(self):
+        return self.roles
+
+    def add_user_role(self, *args, **kwargs):
+        return None
+
+    def remove_user_role(self, *args, **kwargs):
+        return None
+
+
+class FakeKeystoneClient(FakeBase):
+    tenants = FakeTenants()
+    roles = FakeRoles()
+    user_id = '12345'
+
+
+class IdentityTests(base.TestCase):
+
+    def test_get_target_project_id(self):
+        key_mgr = managers.KeystoneManager('user',
+                                           'password',
+                                           'project',
+                                           "http://www.blah.com",
+                                           False)
+
+        @mock.patch.object(key_mgr, 'client', return_value=FakeKeystoneClient())
+        def do_test(mock_client):
+            self.assertEqual(key_mgr.get_target_project_id('bobytenant'),
+                             '0b8a39e82')
+
+        do_test()
+
+    def test_get_admin_role_id(self):
+        key_mgr = managers.KeystoneManager('user',
+                                           'password',
+                                           'project',
+                                           "http://www.blah.com",
+                                           False)
+
+        @mock.patch.object(key_mgr, 'client', return_value=FakeKeystoneClient())
+        def do_test(mock_roleslist):
+            self.assertEqual(key_mgr.get_admin_role_id(), '1213nnt344')
+
+        do_test()
+
+    def test_become_project_admin(self):
+        key_mgr = managers.KeystoneManager('boby',
+                                           'secretpassword',
+                                           'awesomeproject',
+                                           "http://www.boby.com",
+                                           False)
+
+        @mock.patch.object(key_mgr, 'get_admin_role_id', return_value='123')
+        @mock.patch.object(key_mgr, 'client', return_value=FakeKeystoneClient())
+        def do_test(mock_client, mock_roleid):
+            key_mgr.become_project_admin('12321')
+            mock_client.roles.add_user_role.assert_called_with('boby',
+                                                               '123',
+                                                               '12321')
+
+        do_test()
+
+    def test_undo_become_project_admin(self):
+        key_mgr = managers.KeystoneManager('boby',
+                                           'secretpassword',
+                                           'awesomeproject',
+                                           "http://www.boby.com",
+                                           False)
+
+        @mock.patch.object(key_mgr, 'get_admin_role_id', return_value='123')
+        @mock.patch.object(key_mgr, 'client', return_value=FakeKeystoneClient())
+        def do_test(mock_client, mock_roleid):
+            key_mgr.undo_become_project_admin('12321')
+            mock_client.roles.remove_user_role.assert_called_with('boby',
+                                                                  '123',
+                                                                  '12321')
+
+        do_test()
