@@ -25,6 +25,7 @@
 import mock
 
 from flameclient import flame
+from flameclient import client
 from flameclient import managers
 from flameclient.tests import base
 
@@ -2373,7 +2374,8 @@ class FakeRoles(FakeBase):
         return None
 
     def remove_user_role(self, *args, **kwargs):
-        return None
+        print args
+        print 'lolol'
 
 
 class FakeKeystoneClient(FakeBase):
@@ -2391,7 +2393,7 @@ class IdentityTests(base.TestCase):
                                            "http://www.blah.com",
                                            False)
 
-        @mock.patch.object(key_mgr, 'client', return_value=FakeKeystoneClient())
+        @mock.patch.object(key_mgr, 'client', return_value=FakeKeystoneClient)
         def do_test(mock_client):
             self.assertEqual(key_mgr.get_target_project_id('bobytenant'),
                              '0b8a39e82')
@@ -2419,10 +2421,10 @@ class IdentityTests(base.TestCase):
                                            False)
 
         @mock.patch.object(key_mgr, 'get_admin_role_id', return_value='123')
-        @mock.patch.object(key_mgr, 'client', return_value=FakeKeystoneClient())
+        @mock.patch.object(key_mgr, 'client', return_value=FakeKeystoneClient)
         def do_test(mock_client, mock_roleid):
             key_mgr.become_project_admin('12321')
-            mock_client.roles.add_user_role.assert_called_with('boby',
+            mock_client.roles.add_user_role.assert_called_with('12345',
                                                                '123',
                                                                '12321')
 
@@ -2434,13 +2436,29 @@ class IdentityTests(base.TestCase):
                                            'awesomeproject',
                                            "http://www.boby.com",
                                            False)
+        key_mgr._client = FakeKeystoneClient
 
         @mock.patch.object(key_mgr, 'get_admin_role_id', return_value='123')
-        @mock.patch.object(key_mgr, 'client', return_value=FakeKeystoneClient())
+        @mock.patch.object(key_mgr, 'client', return_value=FakeKeystoneClient)
         def do_test(mock_client, mock_roleid):
+            print key_mgr.get_admin_role_id()
             key_mgr.undo_become_project_admin('12321')
-            mock_client.roles.remove_user_role.assert_called_with('boby',
-                                                                  '123',
-                                                                  '12321')
+            mock_client.remove_user_role.assert_called_with('12345',
+                                                            '123',
+                                                            '12321')
+
+        do_test()
+
+class ClientTests(base.TestCase):
+
+    def test_target_project(self):
+        Client = client.Client('user', 'password', 'tenant', 'auth_url', False,
+                               target_project='target_project')
+
+        @mock.patch.object('client.KeystoneManager')
+        @mock.patch.object(Client, 'extract_vm_details', return_value=None)
+        def do_test(mock_extract, mock_keystone):
+            Client.extract_vm_details()
+            mock_extract.assert_called_with(False, False, False, False)
 
         do_test()
