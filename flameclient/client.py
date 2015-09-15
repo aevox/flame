@@ -22,12 +22,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-
-from keystoneclient.openstack.common.apiclient import exceptions
-
 from flameclient.flame import TemplateGenerator  # noqa
 
 from flameclient.managers import KeystoneManager
+
+from keystoneclient.openstack.common.apiclient import exceptions
 
 
 class Client(object):
@@ -55,6 +54,8 @@ class Client(object):
         admin role for the operation. Defaults to tenant_name. User must
         be admin.
     """
+    exclude_keypairs = False
+
     def __init__(self, username, password, tenant_name, auth_url, **kwargs):
         self.username = username
         self.password = password
@@ -65,7 +66,6 @@ class Client(object):
         self.region_name = kwargs.get('region_name', None)
         self.insecure = kwargs.get('insecure', False)
         self.set_as_admin = False
-        self.exclude_keypairs = False
 
         if self.target_project:
             self.key_mgr = KeystoneManager(self.username, self.password,
@@ -99,7 +99,7 @@ class Client(object):
 
     def extract_vm_details(self, exclude_servers=False, exclude_volumes=False,
                            generate_stack_data=False,
-                           exclude_keypairs=self.exclude_keypairs,
+                           exclude_keypairs=exclude_keypairs,
                            **kwargs):
         return self.template_generator.extract_vm_details(exclude_servers,
                                                           exclude_volumes,
