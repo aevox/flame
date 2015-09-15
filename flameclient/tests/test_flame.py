@@ -2454,7 +2454,7 @@ class ClientTests(base.TestCase):
 
     # Test if the exclude_keypairs parameters is set to True if the option
     # target_project is used.
-    @mock.patch('flameclient.client.KeystoneManager')
+    @mock.patch('flameclient.client.managers.KeystoneManager')
     def test_target_project(self, mock_keystone):
         Client = client.Client('user', 'password', 'tenant', 'auth_url',
                                target_project='target_project')

@@ -21,10 +21,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from flameclient import managers
 
 from flameclient.flame import TemplateGenerator  # noqa
-
-from flameclient.managers import KeystoneManager
 
 from keystoneclient.openstack.common.apiclient import exceptions
 
@@ -68,9 +67,11 @@ class Client(object):
         self.set_as_admin = False
 
         if self.target_project:
-            self.key_mgr = KeystoneManager(self.username, self.password,
-                                           self.tenant_name, self.auth_url,
-                                           self.insecure)
+            self.key_mgr = managers.KeystoneManager(self.username,
+                                                    self.password,
+                                                    self.tenant_name,
+                                                    self.auth_url,
+                                                    self.insecure)
             self.target_project_id = self.key_mgr.get_target_project_id(
                 self.target_project)
             try:
